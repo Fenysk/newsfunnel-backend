@@ -1,7 +1,8 @@
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
-import { MailServer } from '@prisma/client';
+import { Injectable, Logger, InternalServerErrorException, Inject, forwardRef } from '@nestjs/common';
+import { Mail, MailServer } from '@prisma/client';
 import * as Imap from 'node-imap';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { MailsService } from '../mails.service';
 
 interface MessageData {
     headerInfo: {
@@ -21,7 +22,12 @@ export class ImapService {
     private readonly imapClients: Map<string, Imap>;
     private readonly logger = new Logger(ImapService.name);
 
-    constructor(private readonly prismaService: PrismaService) {
+    constructor(
+        private readonly prismaService: PrismaService,
+
+        @Inject(forwardRef(() => MailsService))
+        private readonly mailsService: MailsService
+    ) {
         this.imapClients = new Map();
     }
 
@@ -97,6 +103,8 @@ export class ImapService {
     }
 
     private async saveMail(user: string, messageData: MessageData): Promise<void> {
+        let mail: Mail;
+
         try {
             const mailServer = await this.prismaService.mailServer.findFirst({
                 where: { user: user }
@@ -104,7 +112,7 @@ export class ImapService {
 
             if (!mailServer) return;
 
-            await this.prismaService.mail.create({
+            mail = await this.prismaService.mail.create({
                 data: {
                     from: messageData.headerInfo.from?.[0] || '',
                     to: messageData.headerInfo.to?.[0] || '',
@@ -116,6 +124,9 @@ export class ImapService {
         } catch (error) {
             this.handleError('Failed to save mail to database', error);
         }
+
+        if (mail)
+            await this.mailsService.setMetaDataToMail(mail);
     }
 
     addImapClient(user: string, client: Imap): void {

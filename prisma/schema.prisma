@@ -44,7 +44,9 @@ model Profile {
 }
 
 model MailServer {
-  id       String  @id @default(cuid())
+  id String @id @default(cuid())
+
+  name     String
   user     String
   password String
   host     String
@@ -52,18 +54,41 @@ model MailServer {
   tls      Boolean
   userId   String
 
-  User User @relation("UserToMailServer", fields: [userId], references: [id])
+  User  User   @relation("UserToMailServer", fields: [userId], references: [id])
   Mails Mail[] @relation("MailServerToMail")
 }
 
 model Mail {
-  id        String   @id @default(cuid())
-  from      String
-  to        String
-  subject   String?
-  body      String
+  id String @id @default(cuid())
+
+  from    String
+  to      String
+  subject String?
+  body    String
+
   createdAt DateTime @default(now())
-  
+
   mailServerId String
-  MailServer   MailServer @relation("MailServerToMail", fields: [mailServerId], references: [id], onDelete: Cascade)
+  MailServer   MailServer    @relation("MailServerToMail", fields: [mailServerId], references: [id], onDelete: Cascade)
+  Metadata     MailMetadata? @relation("MailToMetadata")
+}
+
+model MailMetadata {
+  id String @id @default(cuid())
+
+  isNewsletter        Boolean
+  newsletterName      String?
+  theme               String[]
+  tags                String[]
+  mainSubjectsTitle   String[]
+  oneResumeSentence   String
+  longResume          String
+  differentSubject    Boolean
+  isExplicitSponsored Boolean
+  sponsorIfTrue       String?
+  unsubscribeLink     String?
+  priority            Int
+
+  mailId String @unique
+  Mail   Mail   @relation("MailToMetadata", fields: [mailId], references: [id], onDelete: Cascade)
 }

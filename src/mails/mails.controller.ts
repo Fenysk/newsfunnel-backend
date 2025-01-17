@@ -1,6 +1,5 @@
 import { Controller, Post, Body, Delete, Param, Get } from '@nestjs/common';
 import { MailsService } from './mails.service';
-import { SubscribeMailsRequestDto } from './dto/subscribe-mails.request';
 import { LinkMailsRequestDto } from './dto/link-mails.request';
 import { GetUser } from 'src/common/decorator/get-user.decorator';
 import { Mail, MailServer, User } from '@prisma/client';
@@ -42,5 +41,13 @@ export class MailsController {
         @GetUser() user: User,
     ): Promise<Mail[]> {
         return await this.mailsService.fetchAllMails(user.id, email);
+    }
+
+    @Get('fetch-metadata/:email')
+    async fetchMailsMetadata(
+        @Param('email') email: string,
+        @GetUser() user: User,
+    ) {
+        return await this.mailsService.fetchMailsMetadata(user.id, email);
     }
 }
