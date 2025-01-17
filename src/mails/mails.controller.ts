@@ -1,9 +1,9 @@
-import { Controller, Post, Body, Delete, Param } from '@nestjs/common';
+import { Controller, Post, Body, Delete, Param, Get } from '@nestjs/common';
 import { MailsService } from './mails.service';
 import { SubscribeMailsRequestDto } from './dto/subscribe-mails.request';
 import { LinkMailsRequestDto } from './dto/link-mails.request';
 import { GetUser } from 'src/common/decorator/get-user.decorator';
-import { MailServer, User } from '@prisma/client';
+import { Mail, MailServer, User } from '@prisma/client';
 
 @Controller('mails')
 export class MailsController {
@@ -19,7 +19,7 @@ export class MailsController {
     @Post('link')
     async linkMail(
         @Body() requestBody: LinkMailsRequestDto,
-        @GetUser() user: User,  
+        @GetUser() user: User,
     ): Promise<MailServer> {
         const mailServer = await this.mailsService.linkMail({ config: requestBody, userId: user.id });
 
@@ -31,8 +31,16 @@ export class MailsController {
     @Delete('unlink/:email')
     async unlinkMail(
         @Param('email') email: string,
-        @GetUser() user: User,  
+        @GetUser() user: User,
     ): Promise<void> {
         return await this.mailsService.unlinkMail({ email: email, userId: user.id });
+    }
+
+    @Get('fetch-all/:email')
+    async fetchAllMails(
+        @Param('email') email: string,
+        @GetUser() user: User,
+    ): Promise<Mail[]> {
+        return await this.mailsService.fetchAllMails(user.id, email);
     }
 }

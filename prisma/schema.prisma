@@ -44,7 +44,7 @@ model Profile {
 }
 
 model MailServer {
-  id       Int     @id @default(autoincrement())
+  id       String  @id @default(cuid())
   user     String
   password String
   host     String
@@ -53,4 +53,17 @@ model MailServer {
   userId   String
 
   User User @relation("UserToMailServer", fields: [userId], references: [id])
+  Mails Mail[] @relation("MailServerToMail")
+}
+
+model Mail {
+  id        String   @id @default(cuid())
+  from      String
+  to        String
+  subject   String?
+  body      String
+  createdAt DateTime @default(now())
+  
+  mailServerId String
+  MailServer   MailServer @relation("MailServerToMail", fields: [mailServerId], references: [id], onDelete: Cascade)
 }

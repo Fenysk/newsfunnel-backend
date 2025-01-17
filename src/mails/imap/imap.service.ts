@@ -1,103 +1,153 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
 import { MailServer } from '@prisma/client';
 import * as Imap from 'node-imap';
+import { PrismaService } from 'src/prisma/prisma.service';
+
+interface MessageData {
+    headerInfo: {
+        from?: string[];
+        to?: string[];
+        subject?: string[];
+    };
+    bodyInfo: string;
+}
+
+interface ImapFetchOptions {
+    bodies: string[];
+}
 
 @Injectable()
 export class ImapService {
     private readonly imapClients: Map<string, Imap>;
+    private readonly logger = new Logger(ImapService.name);
 
-    constructor() {
+    constructor(private readonly prismaService: PrismaService) {
         this.imapClients = new Map();
     }
 
     createImapClient(mailServer: MailServer): Imap {
-        return new Imap({
-            user: mailServer.user,
-            password: mailServer.password,
-            host: mailServer.host,
-            port: mailServer.port,
-            tls: mailServer.tls
-        });
+        try {
+            return new Imap({
+                user: mailServer.user,
+                password: mailServer.password,
+                host: mailServer.host,
+                port: mailServer.port,
+                tls: mailServer.tls
+            });
+        } catch (error) {
+            this.handleError('Failed to create IMAP client', error);
+        }
     }
 
     setupImapEventListeners(imapClient: Imap, user: string): void {
-        imapClient.once('ready', () => {
-            this.handleImapReady(imapClient, user);
+        imapClient.on('ready', () => {
+            this.logger.log(`IMAP client ready for user: ${user}`);
+            this.listenForNewEmails(imapClient, user);
         });
 
-        imapClient.once('error', (err) => {
-            console.error(`IMAP Error for ${user}:`, err);
+        imapClient.on('error', (error) => {
+            this.handleError(`IMAP error for user ${user}`, error);
+        });
+
+        imapClient.on('end', () => {
+            this.logger.log(`IMAP connection ended for user: ${user}`);
         });
     }
 
-    private handleImapReady(imapClient: Imap, user: string): void {
-        console.log(`IMAP client ready for ${user}`);
+    private async listenForNewEmails(imapClient: Imap, user: string): Promise<void> {
+        try {
+            imapClient.openBox('INBOX', false, (err, box) => {
+                if (err) throw err;
 
-        imapClient.openBox('INBOX', false, (err) => {
-            if (err) throw err;
+                imapClient.on('mail', () => {
+                    const fetchOptions: ImapFetchOptions = { bodies: ['HEADER.FIELDS (FROM TO SUBJECT)', 'TEXT'] };
+                    const fetch = imapClient.seq.fetch('*', fetchOptions);
 
-            imapClient.on('mail', (numNew) => {
-                console.log(`New message(s) received for ${user}: ${numNew}`);
-                this.fetchNewEmails(user);
+                    fetch.on('message', (msg) => {
+                        const messageData: MessageData = {
+                            headerInfo: {},
+                            bodyInfo: ''
+                        };
+
+                        msg.on('body', (stream, info) => {
+                            let buffer = '';
+                            stream.on('data', (chunk) => {
+                                buffer += chunk.toString('utf8');
+                            });
+
+                            stream.on('end', () => {
+                                if (info.which.includes('HEADER')) {
+                                    const header = Imap.parseHeader(buffer);
+                                    messageData.headerInfo = header;
+                                } else {
+                                    messageData.bodyInfo = buffer;
+                                }
+                            });
+                        });
+
+                        msg.on('end', async () => {
+                            await this.saveMail(user, messageData);
+                        });
+                    });
+                });
             });
-        });
-    }
-
-    private async fetchNewEmails(user: string): Promise<void> {
-        const imapClient = this.imapClients.get(user);
-        if (!imapClient) {
-            throw new Error(`No IMAP client found for user: ${user}`);
+        } catch (error) {
+            this.handleError('Failed to listen for new emails', error);
         }
-
-        const fetch = imapClient.seq.fetch('*', {
-            bodies: ['HEADER.FIELDS (FROM TO SUBJECT)', 'TEXT'],
-        });
-
-        fetch.on('message', (msg) => {
-            this.handleNewMessage(msg, user);
-        });
     }
 
-    private handleNewMessage(msg: any, user: string): void {
-        let headerInfo = {};
-        let bodyInfo = '';
-
-        msg.on('body', (stream, info) => {
-            let buffer = '';
-            stream.on('data', (chunk) => {
-                buffer += chunk.toString('utf8');
+    private async saveMail(user: string, messageData: MessageData): Promise<void> {
+        try {
+            const mailServer = await this.prismaService.mailServer.findFirst({
+                where: { user: user }
             });
 
-            stream.once('end', () => {
-                if (info.which === 'TEXT') {
-                    bodyInfo = buffer;
-                } else {
-                    headerInfo = Imap.parseHeader(buffer);
+            if (!mailServer) return;
+
+            await this.prismaService.mail.create({
+                data: {
+                    from: messageData.headerInfo.from?.[0] || '',
+                    to: messageData.headerInfo.to?.[0] || '',
+                    subject: messageData.headerInfo.subject?.[0] || '',
+                    body: messageData.bodyInfo,
+                    mailServerId: mailServer.id
                 }
             });
-        });
-
-        msg.once('end', () => {
-            console.log(`Processed message for ${user}:`, {
-                headers: headerInfo,
-                body: bodyInfo
-            });
-        });
+        } catch (error) {
+            this.handleError('Failed to save mail to database', error);
+        }
     }
 
     addImapClient(user: string, client: Imap): void {
-        this.imapClients.set(user, client);
+        try {
+            this.imapClients.set(user, client);
+        } catch (error) {
+            this.handleError('Failed to add IMAP client', error);
+        }
     }
 
     removeImapClient(user: string): void {
-        if (this.imapClients.has(user)) {
+        try {
             const client = this.imapClients.get(user);
-            client.end();
-            this.imapClients.delete(user);
+            if (client) {
+                client.end();
+                this.imapClients.delete(user);
+            }
+        } catch (error) {
+            this.handleError('Failed to remove IMAP client', error);
         }
     }
 
     getImapClient(user: string): Imap | undefined {
-        return this.imapClients.get(user);
+        try {
+            return this.imapClients.get(user);
+        } catch (error) {
+            this.handleError('Failed to get IMAP client', error);
+        }
+    }
+
+    private handleError(message: string, error: Error): never {
+        this.logger.error(`${message}: ${error.message}`);
+        throw new InternalServerErrorException(message);
     }
 }

@@ -1,10 +1,7 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as Imap from 'node-imap';
-import { SubscribeMailsRequestDto } from './dto/subscribe-mails.request';
+import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { LinkMailsRequestDto } from './dto/link-mails.request';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { MailServer } from '@prisma/client';
+import { Mail, MailServer } from '@prisma/client';
 import { ImapService } from './imap/imap.service';
 
 @Injectable()
@@ -17,12 +14,8 @@ export class MailsService {
     async subscribeToAllMails(): Promise<void> {
         const mailServers = await this.prismaService.mailServer.findMany();
 
-        for (const mailServer of mailServers) {
-            console.log(`Subscribing to mail server: ${mailServer.host} for user: ${mailServer.user}`);
+        for (const mailServer of mailServers)
             await this.subscribeToMails(mailServer);
-        }
-
-        console.log('Finished subscribing to all mail servers');
     }
 
     async subscribeToMails(mailServer: MailServer): Promise<void> {
@@ -89,5 +82,29 @@ export class MailsService {
         });
 
         this.imapService.removeImapClient(email);
+    }
+
+    async fetchAllMails(userId: string, email: string): Promise<Mail[]> {
+        const user = await this.prismaService.user.findUnique({
+            where: { id: userId }
+        });
+
+        if (!user)
+            throw new UnauthorizedException('User not allowed');
+
+        const mailServer = await this.prismaService.mailServer.findFirst({
+            where: {
+                userId: userId,
+                user: email
+            },
+            include: {
+                Mails: true
+            }
+        });
+
+        if (!mailServer)
+            throw new NotFoundException('Mail server not found');
+
+        return mailServer.Mails;
     }
 }
