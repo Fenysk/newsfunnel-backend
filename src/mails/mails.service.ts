@@ -30,6 +30,16 @@ export class MailsService {
         imapClient.connect();
     }
 
+    async getUserMailServers(userId: string): Promise<MailServer[]> {
+        const mailServers = await this.prismaService.mailServer.findMany({
+            where: {
+                userId: userId
+            }
+        });
+
+        return mailServers;
+    }
+
     async linkMail({
         config,
         userId,

@@ -15,6 +15,13 @@ export class MailsController {
         return await this.mailsService.subscribeToMails(mailServer);
     }
 
+    @Get('getUserMailServers')
+    async getUserMailServers(
+        @GetUser() user: User,
+    ): Promise<MailServer[]> {
+        return await this.mailsService.getUserMailServers(user.id);
+    }
+
     @Post('link')
     async linkMail(
         @Body() requestBody: LinkMailsRequestDto,
