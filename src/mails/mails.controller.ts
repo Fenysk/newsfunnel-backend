@@ -46,7 +46,7 @@ export class MailsController {
     async fetchAllMails(
         @Param('email') email: string,
         @GetUser() user: User,
-    ): Promise<Mail[]> {
+    ): Promise<Omit<Mail, 'body'>[]> {
         return await this.mailsService.fetchAllMails(user.id, email);
     }
 

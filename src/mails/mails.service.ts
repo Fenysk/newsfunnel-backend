@@ -100,9 +100,9 @@ export class MailsService {
         this.imapService.removeEmailClient(email);
     }
 
-    async fetchAllMails(userId: string, email: string): Promise<Mail[]> {
+    async fetchAllMails(userId: string, email: string): Promise<Omit<Mail, 'body'>[]> {
         const user = await this.prismaService.user.findUnique({
-            where: { id: userId }
+            where: { id: userId },
         });
 
         if (!user)
@@ -113,9 +113,15 @@ export class MailsService {
                 userId: userId,
                 user: email
             },
-            include: {
+            select: {
                 Mails: {
-                    include: {
+                    select: {
+                        id: true,
+                        from: true,
+                        to: true,
+                        subject: true,
+                        createdAt: true,
+                        mailServerId: true,
                         Metadata: true
                     },
                     orderBy: {
