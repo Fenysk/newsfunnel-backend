@@ -53,8 +53,28 @@ export class MailsService {
 
         if (!mail)
             throw new NotFoundException('Mail not found');
-        
+
         return mail;
+    }
+
+    async deleteMail(mailId: string, userId: string): Promise<void> {
+        const mail = await this.prismaService.mail.findFirst({
+            where: {
+                id: mailId,
+                MailServer: {
+                    userId: userId
+                }
+            }
+        });
+
+        if (!mail)
+            throw new NotFoundException('Mail not found');
+
+        await this.prismaService.mail.delete({
+            where: {
+                id: mailId
+            }
+        });
     }
 
     async linkMail({

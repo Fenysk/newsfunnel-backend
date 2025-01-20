@@ -30,6 +30,14 @@ export class MailsController {
         return await this.mailsService.getMailDetails(mailId, user.id);
     }
 
+    @Delete('delete/:mailId')
+    async deleteMail(
+        @Param('mailId') mailId: string,
+        @GetUser() user: User,
+    ): Promise<void> {
+        return await this.mailsService.deleteMail(mailId, user.id);
+    }
+
     @Post('link')
     async linkMail(
         @Body() requestBody: LinkMailsRequestDto,
