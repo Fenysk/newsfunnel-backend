@@ -22,6 +22,14 @@ export class MailsController {
         return await this.mailsService.getUserMailServers(user.id);
     }
 
+    @Get('get-details/:mailId')
+    async getMailDetails(
+        @Param('mailId') mailId: string,
+        @GetUser() user: User,
+    ): Promise<Mail> {
+        return await this.mailsService.getMailDetails(mailId, user.id);
+    }
+
     @Post('link')
     async linkMail(
         @Body() requestBody: LinkMailsRequestDto,

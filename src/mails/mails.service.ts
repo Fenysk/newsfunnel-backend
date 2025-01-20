@@ -41,6 +41,22 @@ export class MailsService {
         return mailServers;
     }
 
+    async getMailDetails(mailId: string, userId: string): Promise<Mail> {
+        const mail = await this.prismaService.mail.findFirst({
+            where: {
+                id: mailId,
+                MailServer: {
+                    userId: userId
+                }
+            }
+        });
+
+        if (!mail)
+            throw new NotFoundException('Mail not found');
+        
+        return mail;
+    }
+
     async linkMail({
         config,
         userId,
