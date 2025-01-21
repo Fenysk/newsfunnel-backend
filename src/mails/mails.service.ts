@@ -157,6 +157,7 @@ export class MailsService {
                         to: true,
                         subject: true,
                         markdownSummary: true,
+                        isRead: true,
                         createdAt: true,
                         mailServerId: true,
                     },
@@ -214,5 +215,29 @@ export class MailsService {
         return updatedMail;
     }
 
+    async markMailReadState(mailId: string, isRead: boolean, userId: string): Promise<Mail> {
+        const mail = await this.prismaService.mail.findFirst({
+            where: {
+                id: mailId,
+                MailServer: {
+                    userId: userId
+                }
+            }
+        });
+
+        if (!mail)
+            throw new NotFoundException('Mail not found or access denied');
+
+        const updatedMail = await this.prismaService.mail.update({
+            where: {
+                id: mailId
+            },
+            data: {
+                isRead: isRead
+            }
+        });
+
+        return updatedMail;
+    }
 
 }

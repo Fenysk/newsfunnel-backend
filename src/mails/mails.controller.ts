@@ -65,4 +65,13 @@ export class MailsController {
     ): Promise<Omit<Mail, 'body'>[]> {
         return await this.mailsService.fetchAllMails(user.id, email);
     }
+
+    @Post('mark-read/:mailId/:state')
+    async markMailReadState(
+        @Param('mailId') mailId: string,
+        @Param('state') state: string,
+        @GetUser() user: User,
+    ): Promise<Mail> {
+        return await this.mailsService.markMailReadState(mailId, state === 'true', user.id);
+    }
 }
