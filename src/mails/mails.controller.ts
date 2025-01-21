@@ -74,4 +74,13 @@ export class MailsController {
     ): Promise<Mail> {
         return await this.mailsService.markMailReadState(mailId, state === 'true', user.id);
     }
+
+    @Post('generate-summary/:mailId')
+    async generateMarkdownSummaryToMail(
+        @Param('mailId') mailId: string,
+        @GetUser() user: User,
+    ): Promise<Mail> {
+        const mail = await this.mailsService.getMailDetails(mailId, user.id);
+        return await this.mailsService.generateMarkdownSummaryToMail(mail);
+    }
 }
