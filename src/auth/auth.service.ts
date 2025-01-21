@@ -108,7 +108,7 @@ export class AuthService {
         // Access token
         const expirationAccessTokenMs = parseInt(
             this.configService.getOrThrow('JWT_ACCESS_TOKEN_EXPIRATION_MS')
-        );
+        ) || 15 * 60 * 1000;
 
         const expiresAccessToken = new Date();
 
@@ -128,7 +128,7 @@ export class AuthService {
         // Refresh token
         const expirationRefreshTokenMs = parseInt(
             this.configService.getOrThrow('JWT_REFRESH_TOKEN_EXPIRATION_MS')
-        );
+        ) || 30 * 24 * 60 * 60 * 1000;
 
         const expiresRefreshToken = new Date();
 
