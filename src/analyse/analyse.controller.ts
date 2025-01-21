@@ -1,6 +1,5 @@
 import { Controller, Post, Body, Param } from '@nestjs/common';
 import { ClaudeService } from './claude/claude.service';
-import { NewsletterMetaDataResponse } from './dto/article-meta-data.response';
 import { AnalyseService } from './analyse.service';
 
 @Controller('analyse')
@@ -10,11 +9,11 @@ export class AnalyseController {
         private readonly analyseService: AnalyseService,
     ) { }
 
-    @Post('getNewletterMetaData')
-    async getNewletterMetaData(
+    @Post()
+    async summarizeNewsletterToMarkdown(
         @Body('text') text: string
-    ): Promise<NewsletterMetaDataResponse> {
-        const analysis = await this.analyseService.getNewletterMetaData(text);
+    ): Promise<string> {
+        const analysis = await this.analyseService.summarizeNewsletterToMarkdown(text);
 
         return analysis;
     }

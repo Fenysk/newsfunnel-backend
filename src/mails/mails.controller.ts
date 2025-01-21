@@ -38,13 +38,6 @@ export class MailsController {
         return await this.mailsService.deleteMail(mailId, user.id);
     }
 
-    @Post('generateMetaData/:mailId')
-    async generateMailMetaData(
-        @Param('mailId') mailId: string
-    ): Promise<void> {
-        await this.mailsService.setMetaDataToMail(mailId);
-    }
-
     @Post('link')
     async linkMail(
         @Body() requestBody: LinkMailsRequestDto,
@@ -71,13 +64,5 @@ export class MailsController {
         @GetUser() user: User,
     ): Promise<Omit<Mail, 'body'>[]> {
         return await this.mailsService.fetchAllMails(user.id, email);
-    }
-
-    @Get('fetch-metadata/:email')
-    async fetchMailsMetadata(
-        @Param('email') email: string,
-        @GetUser() user: User,
-    ) {
-        return await this.mailsService.fetchMailsMetadata(user.id, email);
     }
 }

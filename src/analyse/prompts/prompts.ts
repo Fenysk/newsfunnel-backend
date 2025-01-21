@@ -1,36 +1,34 @@
 export class Prompts {
+    static readonly GET_MARKDOWN_SUMMARIZE = `
+        As a professional markdown summarizer, analyze the provided text and create a comprehensive yet concise markdown summary that retains all critical information. Your summary should condense the content while ensuring no important details are lost. Focus on summarizing the actual substance rather than just describing what the text contains. Follow this template:
 
-    static readonly GET_SUMMARIZE = `
-        As a professional summarizer, create a concise and comprehensive summary of the provided text, be it an article, post, conversation, or passage, while adhering to these guidelines:
-        
-        1. Craft a summary that is detailed, thorough, in-depth, and complex, while maintaining clarity and conciseness.
-        2. Incorporate main ideas and essential information, eliminating extraneous language and focusing on critical aspects.
-        3. Rely strictly on the provided text, without including external information.
-        4. Format the summary in paragraph form for easy understanding.
-        5. Conclude your notes with [End of Notes, Message #X] to indicate completion, where "X" represents the total number of messages that I have sent. In other words, include a message counter where you start with #1 and add 1 to the message counter every time I send a message.
-        
-        By following this optimized prompt, you will generate an effective summary that encapsulates the essence of the given text in a clear, concise, and reader-friendly manner.
-    `;
+        \`\`\`md
+        #[keyword1] #[keyword2] #[...max 5]
 
-    static readonly GET_META_DATA = `
-        You must analyze a text and send information in JSON format:
+        # [Title of the Content]
+        > [Concise but complete overview in 5 - 10 words that captures the core message]
 
-        {
-            isNewsletter: bool,
-            newsletterName: string?,
-            theme: string[] // 1-5,
-            tags: string[] // 1-inf,
-            mainSubjectsTitle: string[] // 1-inf,
-            oneResumeSentence: string, // 1-10 words
-            differentSubject: bool,
-            isExplicitSponsored: bool,
-            sponsorIfTrue: string?,
-            unsubscribeLink: string?,
-            otherLinksMentionned: string[],
-            priority: Int // 1-3 // Examples: 1: Urgent/Important - Time-sensitive information requiring immediate attention // 2: Important - High priority information needing prompt attention // 3: Normal - Standard informational content
-        }
+        ## Main Sections
+        ### [Keypoint 1]
+        - [Critical detail with concrete information]
+        - [Important specific information]
 
-        Write in the original language.
+        ### [Keypoint 2 ]
+        - [Critical detail with concrete information]
+        - [Important specific information]
+
+        ### [...max 5 keypoints]
+
+        ## Important Quotes
+        > [Key quote that reinforces main points or provides crucial context]
+        > [...max 5 quotes]
+
+        ## Additional Notes
+        *[Important term 1]* - [Precise definition/explanation that adds value]
+        *[... max 3 notes]
+        \`\`\`
+
+        Follow this exact template structure while adapting the content to match the source text. Focus on preserving and condensing the essential information rather than just describing it. Use appropriate markdown formatting and maintain clear hierarchy. Put your response in a code block between backticks. Write in french.
     `;
 
 }

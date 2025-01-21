@@ -1,10 +1,10 @@
 import { ConflictException, Injectable, InternalServerErrorException, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { LinkMailsRequestDto } from './dto/link-mails.request';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Mail, MailMetadata, MailServer } from '@prisma/client';
+import { Mail, MailServer } from '@prisma/client';
 import { ImapService } from './imap/imap.service';
-import { AnalyseService } from 'src/analyse/analyse.service';
 import { EmailMessage } from './interfaces/email-message.interface';
+import { AnalyseService } from 'src/analyse/analyse.service';
 
 @Injectable()
 export class MailsService {
@@ -13,7 +13,7 @@ export class MailsService {
     constructor(
         private readonly prismaService: PrismaService,
         private readonly imapService: ImapService,
-        private readonly analyseService: AnalyseService,
+        private readonly analyseService: AnalyseService
     ) { }
 
     async subscribeToAllMails(): Promise<void> {
@@ -49,9 +49,6 @@ export class MailsService {
                     userId: userId
                 },
             },
-            include: {
-                Metadata: true,
-            }
         });
 
         if (!mail)
@@ -159,9 +156,9 @@ export class MailsService {
                         from: true,
                         to: true,
                         subject: true,
+                        markdownSummary: true,
                         createdAt: true,
                         mailServerId: true,
-                        Metadata: true
                     },
                     orderBy: {
                         createdAt: 'desc'
@@ -201,141 +198,21 @@ export class MailsService {
         });
     }
 
-    async fetchMailsMetadata(userId: string, email: string): Promise<MailMetadata[]> {
-        const user = await this.prismaService.user.findUnique({
-            where: { id: userId }
-        });
+    async generateMarkdownSummaryToMail(mail: Mail): Promise<Mail> {
 
-        if (!user)
-            throw new UnauthorizedException('User not allowed');
+        const markdownSummary = await this.analyseService.summarizeNewsletterToMarkdown(mail.body);
 
-        const mailServer = await this.prismaService.mailServer.findFirst({
+        const updatedMail = await this.prismaService.mail.update({
             where: {
-                userId: userId,
-                user: email
+                id: mail.id
             },
-            include: {
-                Mails: {
-                    include: {
-                        Metadata: true
-                    },
-                    orderBy: {
-                        createdAt: 'desc'
-                    }
-                }
-            }
+            data: {
+                markdownSummary,
+            },
         });
 
-        if (!mailServer)
-            throw new NotFoundException('Mail server not found');
-
-        return mailServer.Mails.map(mail => mail.Metadata);
+        return updatedMail;
     }
 
-
-
-    async setMetaDataToMail(mailOrId: Mail | string): Promise<MailMetadata> {
-        const mail = typeof mailOrId === 'string'
-            ? await this.prismaService.mail.findUnique({ where: { id: mailOrId } })
-            : mailOrId;
-
-        if (!mail) {
-            throw new NotFoundException('Mail not found');
-        }
-
-        this.logger.log(`Starting metadata processing for mail ${mail.id}`);
-        let attempts = 0;
-        const maxAttempts = 3;
-
-        while (attempts < maxAttempts) {
-            try {
-                this.logger.debug(`Attempt ${attempts + 1}/${maxAttempts} to get metadata for mail ${mail.id}`);
-                this.logger.log(`Calling analysis service for mail ${mail.id}`);
-
-                const metaData = await this.analyseService.getNewletterMetaData(mail.body);
-                this.logger.debug(`Successfully retrieved metadata from analysis service for mail ${mail.id}`);
-                this.logger.log(`Metadata analysis complete for mail ${mail.id}`);
-
-                if (!metaData.isNewsletter) {
-                    this.logger.debug(`Mail ${mail.id} is not a newsletter, deleting it`);
-                    this.logger.log(`Deleting non-newsletter mail ${mail.id}`);
-                    await this.prismaService.mail.delete({
-                        where: { id: mail.id }
-                    });
-                    this.logger.log(`Successfully deleted non-newsletter mail ${mail.id}`);
-                    return null;
-                }
-
-                this.logger.log(`Creating metadata record in database for mail ${mail.id}`);
-
-                this.logger.debug(`Metadata analysis results for mail ${mail.id}:
-                    isNewsletter: ${metaData.isNewsletter}
-                    newsletterName: ${metaData.newsletterName}
-                    theme: ${JSON.stringify(metaData.theme)}
-                    tags: ${JSON.stringify(metaData.tags)}
-                    mainSubjectsTitle: ${JSON.stringify(metaData.mainSubjectsTitle)}
-                    oneResumeSentence: ${metaData.oneResumeSentence}
-                    longResume: ${metaData.longResume}
-                    differentSubject: ${metaData.differentSubject}
-                    isExplicitSponsored: ${metaData.isExplicitSponsored}
-                    sponsorIfTrue: ${metaData.sponsorIfTrue}
-                    unsubscribeLink: ${metaData.unsubscribeLink}
-                    priority: ${metaData.priority}
-                `);
-
-                const savedMetadata = await this.prismaService.mailMetadata.upsert({
-                    where: {
-                        mailId: mail.id
-                    },
-                    create: {
-                        mailId: mail.id,
-                        isNewsletter: metaData.isNewsletter,
-                        newsletterName: metaData.newsletterName,
-                        theme: metaData.theme,
-                        tags: metaData.tags,
-                        mainSubjectsTitle: metaData.mainSubjectsTitle,
-                        oneResumeSentence: metaData.oneResumeSentence,
-                        longResume: metaData.longResume,
-                        differentSubject: metaData.differentSubject,
-                        isExplicitSponsored: metaData.isExplicitSponsored,
-                        sponsorIfTrue: metaData.sponsorIfTrue,
-                        unsubscribeLink: metaData.unsubscribeLink,
-                        priority: metaData.priority
-                    },
-                    update: {
-                        isNewsletter: metaData.isNewsletter,
-                        newsletterName: metaData.newsletterName,
-                        theme: metaData.theme,
-                        tags: metaData.tags,
-                        mainSubjectsTitle: metaData.mainSubjectsTitle,
-                        oneResumeSentence: metaData.oneResumeSentence,
-                        longResume: metaData.longResume,
-                        differentSubject: metaData.differentSubject,
-                        isExplicitSponsored: metaData.isExplicitSponsored,
-                        sponsorIfTrue: metaData.sponsorIfTrue,
-                        unsubscribeLink: metaData.unsubscribeLink,
-                        priority: metaData.priority
-                    }
-                });
-
-                this.logger.debug(`Successfully saved metadata for mail ${mail.id}`);
-                this.logger.log(`Metadata processing complete for mail ${mail.id}`);
-                return savedMetadata;
-
-            } catch (error) {
-                attempts++;
-                this.logger.error(`Failed attempt ${attempts}/${maxAttempts} to process metadata for mail ${mail.id}: ${error.message}`);
-                this.logger.log(`Error details: ${JSON.stringify(error)}`);
-
-                if (attempts === maxAttempts) {
-                    this.logger.error(`Max attempts reached for mail ${mail.id}, giving up`);
-                    this.logger.log(`Terminating metadata processing for mail ${mail.id} after max attempts`);
-                    throw new InternalServerErrorException(`Failed to process metadata after ${maxAttempts} attempts: ${error.message}`);
-                }
-
-                this.logger.log(`Preparing for retry attempt ${attempts + 1} for mail ${mail.id}`);
-            }
-        }
-    }
 
 }

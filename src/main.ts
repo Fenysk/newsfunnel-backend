@@ -45,7 +45,7 @@ async function handleServerError(error: ServerError, retryPort: number): Promise
   process.exit(1);
 }
 
-async function startServer(app: any, port: number): Promise<void> {
+async function startServer(app: NestExpressApplication, port: number): Promise<void> {
   try {
     const availablePort = await findAvailablePort(port);
     console.log(`Server running on port ${availablePort}`);

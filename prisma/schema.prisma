@@ -61,34 +61,14 @@ model MailServer {
 model Mail {
   id String @id @default(cuid())
 
-  from    String
-  to      String
-  subject String?
-  body    String
+  from            String
+  to              String
+  subject         String?
+  body            String
+  markdownSummary String?
 
   createdAt DateTime @default(now())
 
   mailServerId String
-  MailServer   MailServer    @relation("MailServerToMail", fields: [mailServerId], references: [id], onDelete: Cascade)
-  Metadata     MailMetadata? @relation("MailToMetadata")
-}
-
-model MailMetadata {
-  id String @id @default(cuid())
-
-  isNewsletter        Boolean
-  newsletterName      String?
-  theme               String[]
-  tags                String[]
-  mainSubjectsTitle   String[]
-  oneResumeSentence   String
-  longResume          String
-  differentSubject    Boolean
-  isExplicitSponsored Boolean
-  sponsorIfTrue       String?
-  unsubscribeLink     String?
-  priority            Int
-
-  mailId String @unique
-  Mail   Mail   @relation("MailToMetadata", fields: [mailId], references: [id], onDelete: Cascade)
+  MailServer   MailServer @relation("MailServerToMail", fields: [mailServerId], references: [id], onDelete: Cascade)
 }

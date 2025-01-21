@@ -1,32 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { ClaudeService } from './claude/claude.service';
 import { Prompts } from './prompts/prompts';
-import { NewsletterMetaDataResponse } from './dto/article-meta-data.response';
+import { MarkdownService } from 'src/common/utils/markdown.service';
 
 @Injectable()
 export class AnalyseService {
     constructor(
         private readonly claudeService: ClaudeService,
+        private readonly markdownService: MarkdownService
     ) { }
 
-    async getNewletterMetaData(
+    async summarizeNewsletterToMarkdown(
         content: string
-    ): Promise<NewsletterMetaDataResponse> {
-        const summarize = await this.claudeService.getRawResponse({
-            prompt: Prompts.GET_SUMMARIZE,
-            userInput: content,
-        })
-
-        const analysisJsonString = await this.claudeService.analyzeText({
-            prompt: Prompts.GET_META_DATA,
-            userInput: summarize
+    ): Promise<string> {
+        const markdownResponse = await this.claudeService.getRawResponse({
+            prompt: Prompts.GET_MARKDOWN_SUMMARIZE,
+            userInput: content
         });
 
-        const analysis = NewsletterMetaDataResponse.fromJSON(analysisJsonString);
-        
-        analysis.longResume = summarize;
+        console.log(markdownResponse);
 
-        return analysis;
+        if (!this.markdownService.hasValidMarkdown(markdownResponse)) 
+            throw new Error('Invalid markdown response from Claude');
+
+        return this.markdownService.extractMarkdown(markdownResponse);
     }
 
 }

@@ -167,7 +167,7 @@ export class ImapService {
         if (!mailServer) return;
 
         const savedEmail = await this.mailsService.saveEmailToDatabase(emailMessage, mailServer.id);
-        await this.mailsService.setMetaDataToMail(savedEmail);
+        await this.mailsService.generateMarkdownSummaryToMail(savedEmail);
 
         this.markEmailsAsRead('*', emailClient, userEmail);
     }
