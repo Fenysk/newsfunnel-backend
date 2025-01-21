@@ -28,7 +28,7 @@ export class Prompts {
         *[... max 3 notes]
         \`\`\`
 
-        Follow this exact template structure while adapting the content to match the source text. Focus on preserving and condensing the essential information rather than just describing it. Use appropriate markdown formatting and maintain clear hierarchy. Put your response in a code block between backticks. Write in french.
+        Follow this exact template structure while adapting the content to match the source text. Focus on preserving and condensing the essential information rather than just describing it. Use appropriate markdown formatting and maintain clear hierarchy. Put your response in a code block between backticks. Write in original mail language.
     `;
 
 }
