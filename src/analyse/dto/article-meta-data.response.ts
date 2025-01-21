@@ -40,6 +40,11 @@ export class NewsletterMetaDataResponse {
     @IsOptional()
     unsubscribeLink: string | null;
 
+    @IsArray()
+    @IsString({ each: true })
+    @IsOptional()
+    otherLinksMentionned: string[] | null;
+
     @IsNumber()
     priority: number;
 
@@ -57,6 +62,7 @@ export class NewsletterMetaDataResponse {
         response.isExplicitSponsored = json.isExplicitSponsored;
         response.sponsorIfTrue = json.sponsorIfTrue;
         response.unsubscribeLink = json.unsubscribeLink;
+        response.otherLinksMentionned = json.otherLinksMentionned;
         response.priority = json.priority;
 
         return response;

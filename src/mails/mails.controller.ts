@@ -38,6 +38,13 @@ export class MailsController {
         return await this.mailsService.deleteMail(mailId, user.id);
     }
 
+    @Post('generateMetaData/:mailId')
+    async generateMailMetaData(
+        @Param('mailId') mailId: string
+    ): Promise<void> {
+        await this.mailsService.setMetaDataToMail(mailId);
+    }
+
     @Post('link')
     async linkMail(
         @Body() requestBody: LinkMailsRequestDto,

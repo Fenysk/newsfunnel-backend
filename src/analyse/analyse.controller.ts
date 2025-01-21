@@ -1,6 +1,5 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Param } from '@nestjs/common';
 import { ClaudeService } from './claude/claude.service';
-import { Prompts } from './prompts/prompts';
 import { NewsletterMetaDataResponse } from './dto/article-meta-data.response';
 import { AnalyseService } from './analyse.service';
 
@@ -8,7 +7,7 @@ import { AnalyseService } from './analyse.service';
 export class AnalyseController {
     constructor(
         private readonly claudeService: ClaudeService,
-        private readonly analyseService: AnalyseService
+        private readonly analyseService: AnalyseService,
     ) { }
 
     @Post('getNewletterMetaData')

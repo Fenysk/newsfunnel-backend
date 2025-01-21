@@ -47,7 +47,10 @@ export class MailsService {
                 id: mailId,
                 MailServer: {
                     userId: userId
-                }
+                },
+            },
+            include: {
+                Metadata: true,
             }
         });
 
@@ -231,7 +234,15 @@ export class MailsService {
 
 
 
-    async setMetaDataToMail(mail: Mail): Promise<MailMetadata> {
+    async setMetaDataToMail(mailOrId: Mail | string): Promise<MailMetadata> {
+        const mail = typeof mailOrId === 'string'
+            ? await this.prismaService.mail.findUnique({ where: { id: mailOrId } })
+            : mailOrId;
+
+        if (!mail) {
+            throw new NotFoundException('Mail not found');
+        }
+
         this.logger.log(`Starting metadata processing for mail ${mail.id}`);
         let attempts = 0;
         const maxAttempts = 3;
@@ -256,9 +267,42 @@ export class MailsService {
                 }
 
                 this.logger.log(`Creating metadata record in database for mail ${mail.id}`);
-                const savedMetadata = await this.prismaService.mailMetadata.create({
-                    data: {
+
+                this.logger.debug(`Metadata analysis results for mail ${mail.id}:
+                    isNewsletter: ${metaData.isNewsletter}
+                    newsletterName: ${metaData.newsletterName}
+                    theme: ${JSON.stringify(metaData.theme)}
+                    tags: ${JSON.stringify(metaData.tags)}
+                    mainSubjectsTitle: ${JSON.stringify(metaData.mainSubjectsTitle)}
+                    oneResumeSentence: ${metaData.oneResumeSentence}
+                    longResume: ${metaData.longResume}
+                    differentSubject: ${metaData.differentSubject}
+                    isExplicitSponsored: ${metaData.isExplicitSponsored}
+                    sponsorIfTrue: ${metaData.sponsorIfTrue}
+                    unsubscribeLink: ${metaData.unsubscribeLink}
+                    priority: ${metaData.priority}
+                `);
+
+                const savedMetadata = await this.prismaService.mailMetadata.upsert({
+                    where: {
+                        mailId: mail.id
+                    },
+                    create: {
                         mailId: mail.id,
+                        isNewsletter: metaData.isNewsletter,
+                        newsletterName: metaData.newsletterName,
+                        theme: metaData.theme,
+                        tags: metaData.tags,
+                        mainSubjectsTitle: metaData.mainSubjectsTitle,
+                        oneResumeSentence: metaData.oneResumeSentence,
+                        longResume: metaData.longResume,
+                        differentSubject: metaData.differentSubject,
+                        isExplicitSponsored: metaData.isExplicitSponsored,
+                        sponsorIfTrue: metaData.sponsorIfTrue,
+                        unsubscribeLink: metaData.unsubscribeLink,
+                        priority: metaData.priority
+                    },
+                    update: {
                         isNewsletter: metaData.isNewsletter,
                         newsletterName: metaData.newsletterName,
                         theme: metaData.theme,

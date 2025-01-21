@@ -16,11 +16,41 @@ export class ClaudeService {
         })
     }
 
-    async analyzeText({
-        context,
+    async getRawResponse({
+        prompt,
         userInput,
     }: {
-        context: string,
+        prompt: string,
+        userInput: string
+    }): Promise<string> {
+        try {
+            const response = await this.anthropicClient.messages.create({
+                model: "claude-3-sonnet-20240229", 
+                max_tokens: 1024,
+                messages: [
+                    {
+                        role: "user",
+                        content: prompt
+                    },
+                    {
+                        role: "user",
+                        content: userInput
+                    }
+                ],
+            });
+
+            return response.content[response.content.length - 1]['text'];
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            throw new Error(`Failed to get Claude response: ${errorMessage}`);
+        }
+    }
+
+    async analyzeText({
+        prompt,
+        userInput,
+    }: {
+        prompt: string,
         userInput: string
     }): Promise<string> {
         try {
@@ -30,7 +60,7 @@ export class ClaudeService {
                 messages: [
                     {
                         role: "user",
-                        content: context
+                        content: prompt
                     },
                     {
                         role: "user",
